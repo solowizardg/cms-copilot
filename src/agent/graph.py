@@ -3,23 +3,6 @@
 只负责组装各模块，不包含具体业务逻辑。
 """
 
-# 兼容说明（关键）：
-# LangGraph 在本地开发模式下可能会按“文件路径”直接加载本模块（例如 `./src/agent/graph.py`），
-# 这时 `__package__` 为空，像 `from .nodes.xxx import ...` 这样的相对导入会报：
-# ImportError: attempted relative import with no known parent package
-#
-# 处理方式：当检测到非包上下文加载时，把项目的 `src/` 加入 sys.path，
-# 然后统一使用 `agent.*` 的绝对导入。
-from __future__ import annotations
-
-import sys
-from pathlib import Path
-
-if not __package__:  # 通过文件路径加载时通常为 None/""
-    _SRC_DIR = Path(__file__).resolve().parents[1]  # .../src
-    if str(_SRC_DIR) not in sys.path:
-        sys.path.insert(0, str(_SRC_DIR))
-
 from langgraph.graph import END, START, StateGraph
 
 from agent.nodes.article import handle_article, start_article_ui

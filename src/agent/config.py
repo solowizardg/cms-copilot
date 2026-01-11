@@ -7,21 +7,20 @@ import os
 
 # ============ LangGraph Cloud 配置 ============
 
-LANGGRAPH_CLOUD_BASE_URL = os.getenv(
+ARTICLE_WORKFLOW_URL = os.getenv(
     "ARTICLE_WORKFLOW_URL",
-    "https://ai-dev-content-3ff49f037553559c9c2dffeb13809df1.us.langgraph.app",
 )
 
-LANGGRAPH_CLOUD_API_KEY = os.getenv("LANGGRAPH_CLOUD_API_KEY") or os.getenv(
-    "LANGSMITH_API_KEY",
+ARTICLE_WORKFLOW_API_KEY = os.getenv("ARTICLE_WORKFLOW_API_KEY") or os.getenv(
+    "LANGCHAIN_API_KEY",
 )
 
-CLOUD_ASSISTANT_ID = os.getenv("ARTICLE_ASSISTANT_ID", "multiple_graph")
+ARTICLE_ASSISTANT_ID = os.getenv("ARTICLE_ASSISTANT_ID", "multiple_graph")
 
 
 # ============ LLM 配置 ============
 
-LLM_BASE_URL = os.getenv("LLM_BASE_URL", "http://117.50.168.6/")
+LLM_BASE_URL = os.getenv("LLM_BASE_URL")
 LLM_API_KEY = os.getenv("LLM_API_KEY")
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4.1-mini")
 LLM_NANO_MODEL = os.getenv("LLM_NANO_MODEL", "gpt-4.1-nano")
@@ -30,8 +29,7 @@ LLM_NANO_MODEL = os.getenv("LLM_NANO_MODEL", "gpt-4.1-nano")
 # ============ MCP 配置 ============
 # 注：MCP 工具列表现在通过 tools/list 从 MCP Server 动态获取，不再硬编码
 MCP_SITE_SETTING_BASIC_URL = os.getenv(
-    "MCP_SITE_SETTING_BASIC_URL",
-    "https://site-dev.cedemo.cn/api/mcp/site-setting-basic",
+    "MCP_SITE_SETTING_BASIC_URL"
 )
 
 

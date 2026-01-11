@@ -514,45 +514,49 @@ async def report_execute_tool(state: ReportState) -> dict[str, Any]:
 
     # 构建工具详情（给 LLM 参考）
     tool_details = []
-    for spec in tool_specs[:10]:  # 最多展示 10 个工具
-        desc = spec.description[:200] if spec.description else "无描述"
-        schema_info = ""
-        if spec.input_schema and isinstance(spec.input_schema, dict):
-            required = spec.input_schema.get("required") or []
-            schema_info = f" (必填参数: {', '.join(required)})" if required else ""
-        tool_details.append(f"- {spec.name}: {desc}{schema_info}")
-    
-    tool_info = "\n".join(tool_details) if tool_details else "无工具可用"
+    for spec in tool_specs: # 不要限制数量，除非真的装不下
+        # 既然我们重构了，input_schema 里会有极其详细的定义
+        # 直接转成 JSON 字符串贴进去
+        schema_str = json.dumps(spec.input_schema, indent=2, ensure_ascii=False)
+        
+        tool_details.append(f"### 工具: {spec.name}\n")
+        tool_details.append(f"描述: {spec.description}\n")
+        tool_details.append(f"参数定义 (Schema):\n```json\n{schema_str}\n```\n")
+    tool_info = "\n".join(tool_details)
 
     # Planning + Execution 模式：先让 AI 规划出需要哪些数据
-    planning_prompt = f"""你是 GA 数据分析助手。用户问题：{user_text}
+    planning_prompt = f"""你是 Google Analytics (GA4) 高级数据分析专家。
+你的任务是根据用户问题，规划出最合适的数据获取方案。
 
-## 第一步：查看可用的 MCP 工具
-以下是从 GA MCP 获取的工具列表：
+用户问题：{user_text}
+
+## 第一步：理解工具能力 (基于 Schema)
+请仔细阅读以下 MCP 工具定义，特别是 inputSchema 部分。你的参数构造必须严格符合这些 Schema 的约束（例如 snake_case 命名、嵌套结构等）。
 
 {tool_info}
 
-## 第二步：规划数据获取方案
-现在你要**规划出一份数据获取方案**（不是立即调用工具，而是先列出方案）：
+## 第二步：业务规则
+1. 基础查询：大多数“趋势”、“来源”、“页面数据”查询使用 run_report。
+2. 多维分析：如果用户需要多维交叉分析（例如“查看不同城市的浏览器分布”），必须使用 run_pivot_report。
+3. 实时数据：仅当用户明确询问“现在”、“当前”或“最近30分钟”时，使用 run_realtime_report。
+4. 日期默认值：除非用户指定，否则 date_ranges 默认为 [{{"start_date": "7daysAgo", "end_date": "yesterday"}}]。
+5. 热门内容：查询热门页面时，通常 dimensions=["pagePath"]，并配合 order_bys 按指标降序。
 
-如果用户要"网站报告/趋势/流量分析"，请返回 JSON 格式的方案：
+## 第三步：输出规划 (JSON)
+请直接返回 JSON 格式的执行计划，不要包含 Markdown 代码块标记（```json ... ```）或多余解释。格式如下：
+
 {{
   "plan": [
-    {{"desc": "时间趋势", "tool": "run_report", "args": {{"property_id": "{property_id}", "date_ranges": [{{"start_date": "7daysAgo", "end_date": "yesterday"}}], "dimensions": ["date"], "metrics": ["activeUsers","sessions","screenPageViews"]}}}},
-    {{"desc": "流量来源", "tool": "run_report", "args": {{"property_id": "{property_id}", "date_ranges": [{{"start_date": "7daysAgo", "end_date": "yesterday"}}], "dimensions": ["sessionDefaultChannelGroup"], "metrics": ["sessions"]}}}},
-    {{"desc": "设备分布", "tool": "run_report", "args": {{"property_id": "{property_id}", "date_ranges": [{{"start_date": "7daysAgo", "end_date": "yesterday"}}], "dimensions": ["deviceCategory"], "metrics": ["sessions"]}}}}
+    {{
+      "desc": "简洁描述该步骤目的",
+      "tool": "工具名称",
+      "args": {{ ...严格符合 Schema 的参数对象... }}
+    }}
   ]
 }}
 
-**重要限制**：
-1. 只使用上面列出的 MCP 工具（优先 run_report）
-2. 必须严格按工具的 inputSchema 生成参数（snake_case），尤其是 date_ranges / dimensions / metrics / order_bys
-3. 如果用户提到“热门页面/Top pages/页面访问量”，优先使用 dimensions=["pagePath"] 或 ["pageTitle"]，并用 order_bys 按 screenPageViews/sessions 降序
-4. date_ranges 格式必须是 [{{"start_date": "7daysAgo", "end_date": "yesterday"}}]
-5. property_id 必须是 "{property_id}"
-6. 输出必须是严格 JSON（不要多余文字）
-
-输出方案："""
+注意：property_id暂时只能使用{property_id}
+开始生成："""
 
     async def _run(tools_by_name: dict[str, Any]):
         """Planning + Execution 模式：先规划方案，再批量执行，避免 ReAct 重复同样参数。"""

@@ -6,9 +6,9 @@ from langchain_core.tools import tool
 from langgraph_sdk import get_client
 
 from agent.config import (
-    CLOUD_ASSISTANT_ID,
-    LANGGRAPH_CLOUD_API_KEY,
-    LANGGRAPH_CLOUD_BASE_URL,
+    ARTICLE_WORKFLOW_URL,
+    ARTICLE_WORKFLOW_API_KEY,
+    ARTICLE_ASSISTANT_ID,
 )
 
 
@@ -16,14 +16,14 @@ async def call_cloud_article_workflow(
     input_data: dict, on_item=None, headers: dict | None = None
 ):
     """使用 langgraph_sdk 调用部署在 LangGraph Cloud 上的文章 workflow。"""
-    if not LANGGRAPH_CLOUD_API_KEY:
+    if not ARTICLE_WORKFLOW_API_KEY:
         raise RuntimeError(
             "缺少 LangGraph Cloud API key，请设置环境变量 "
             "LANGGRAPH_CLOUD_API_KEY 或 LANGSMITH_API_KEY"
         )
 
     client = get_client(
-        url=LANGGRAPH_CLOUD_BASE_URL, api_key=LANGGRAPH_CLOUD_API_KEY, headers=headers
+        url=ARTICLE_WORKFLOW_URL, api_key=ARTICLE_WORKFLOW_API_KEY, headers=headers
     )
     print(f"[DEBUG] call_cloud_article_workflow: input_data = {input_data}")
     print(f"[DEBUG] call_cloud_article_workflow: headers = {headers}")
@@ -33,7 +33,7 @@ async def call_cloud_article_workflow(
     stream_results: list[dict] = []
     async for chunk in client.runs.stream(
         thread_id,
-        CLOUD_ASSISTANT_ID,
+        ARTICLE_ASSISTANT_ID,
         input=input_data,
         stream_mode="updates",
     ):
